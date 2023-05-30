@@ -1,5 +1,6 @@
 # SFLU epitope diversity
 
+## On 2022-08-30
 As suggested by the reviewer, we try to study the diversity of mutations of the NP epitope in different samples. Both at nucletoide/locus level and at haplotype level.
 
 Using three metrics:

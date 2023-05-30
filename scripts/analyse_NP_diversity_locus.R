@@ -2,6 +2,7 @@ library(tidyverse)
 library(Biostrings)
 library(readxl)
 library(writexl)
+library(ggpval)
 
 # NP immunodominant epitope 
 # amino acid position 366 - 374
@@ -12,11 +13,13 @@ nt_pos <- 1096:1122
 df_meta <- read_excel("../data/sample_key_simple.xlsx")
 df_meta <- df_meta %>% filter(Analysis=="Y")
 df_meta$sample <- paste0(df_meta$CODE, "-NP")
+df_meta$sample[grepl("^6E", df_meta$sample)] <- gsub("-NP", "", df_meta$sample[grepl("^6E", df_meta$sample)])
 df_meta <- df_meta %>% arrange(TRANSFER,CODE)
 
 # read the vcf data
 files_NP_vcf <- list.files("../results/IRMA-results/", "A_NP.vcf", recursive = T)
-files_NP_vcf <- files_NP_vcf[grepl("-NP", files_NP_vcf)]
+files_NP_vcf <- files_NP_vcf_all[grepl("^6E", files_NP_vcf_all)]
+files_NP_vcf <- c(files_NP_vcf, files_NP_vcf_all[grepl("-NP", files_NP_vcf_all)])
 samples_all <- gsub("/.+", "", files_NP_vcf)
 
 check_analysis <- samples_all %in% df_meta$sample
@@ -35,8 +38,9 @@ samples_all <- samples_all[check_analysis]
 # unique(df_vcf_epitope$sample)
 
 # read all alleles data
-files_NP_allAlleles <- list.files("../results/IRMA-results/", "A_NP-allAlleles.txt", recursive = T)
-files_NP_allAlleles <- files_NP_allAlleles[grepl("-NP", files_NP_allAlleles)]
+files_NP_allAlleles_all <- list.files("../results/IRMA-results/", "A_NP-allAlleles.txt", recursive = T)
+files_NP_allAlleles <- files_NP_allAlleles_all[grepl("^6E", files_NP_allAlleles_all)]
+files_NP_allAlleles <- c(files_NP_allAlleles, files_NP_allAlleles_all[grepl("-NP", files_NP_allAlleles_all)])
 samples_all <- gsub("/.+", "", files_NP_allAlleles)
 
 check_analysis <- samples_all %in% df_meta$sample
@@ -69,10 +73,11 @@ df_meta$shannon_entropy_locus <- sapply(df_meta$sample, function(sample_i){
 		mean(hs_locus_i)
 	}
 })
-wilcox.test(df_meta$shannon_entropy_locus[df_meta$TRANSFER=="infection T cells"], df_meta$shannon_entropy_locus[df_meta$TRANSFER=="vaccine T cells"])
-# t.test(df_meta$shannon_entropy_locus[df_meta$TRANSFER=="infection T cells"], df_meta$shannon_entropy_locus[df_meta$TRANSFER=="vaccine T cells"])
-p <- ggplot(df_meta) + geom_boxplot(aes(x=TRANSFER, y=shannon_entropy_locus))
-ggsave("../results/boxplot_locus_Shannon_entropy.pdf")
+wilcox.test(df_meta$shannon_entropy_locus[df_meta$TRANSFER=="virus T cells"], df_meta$shannon_entropy_locus[df_meta$TRANSFER=="vaccine T cells"])
+# t.test(df_meta$shannon_entropy_locus[df_meta$TRANSFER=="virus T cells"], df_meta$shannon_entropy_locus[df_meta$TRANSFER=="vaccine T cells"])
+p <- ggplot(df_meta, aes(x=TRANSFER, y=shannon_entropy_locus)) + geom_boxplot() + geom_jitter(alpha=0.8)+ylab("Shannon entropy (Locus)") + theme(axis.title.x = element_blank())
+add_pval(p, pairs = list(c(2,3)), test='wilcox.test', alternative='two.sided')
+ggsave("../results/boxplot_locus_Shannon_entropy.pdf", width = 6, height =6)
 
 ## nucleotide diversity
 df_meta$nucleotide_diversity_locus <- sapply(df_meta$sample, function(sample_i){
@@ -92,10 +97,11 @@ df_meta$nucleotide_diversity_locus <- sapply(df_meta$sample, function(sample_i){
 		mean(hpi_locus_i)
 	}
 })
-wilcox.test(df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="infection T cells"], df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="vaccine T cells"])
-# t.test(df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="infection T cells"], df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="vaccine T cells"])
-p <- ggplot(df_meta) + geom_boxplot(aes(x=TRANSFER, y=nucleotide_diversity_locus))
-ggsave("../results/boxplot_locus_nucleotide_diversity.pdf")
+wilcox.test(df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="virus T cells"], df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="vaccine T cells"])
+# t.test(df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="virus T cells"], df_meta$nucleotide_diversity_locus[df_meta$TRANSFER=="vaccine T cells"])
+p <- ggplot(df_meta, aes(x=TRANSFER, y=nucleotide_diversity_locus)) + geom_boxplot() + geom_jitter(alpha=0.8)+ylab("Nucleotide diversity (Locus)") + theme(axis.title.x = element_blank())
+add_pval(p, pairs = list(c(2,3)), test='wilcox.test', alternative='two.sided')
+ggsave("../results/boxplot_locus_nucleotide_diversity.pdf", width = 6, height =6)
 
 ## Fst
 ## nucleotide diversity between groups, and within groups.
@@ -116,6 +122,7 @@ df_pairs_all$nucleotide_diversity_locus <- sapply(seq_len(nrow(df_pairs_all)), f
 		hpi_locus_i <- sapply(nt_pos, function(nt_pos_i){
 			if(!nt_pos_i %in% df_allAlleles_tmp$POS) {return(0)} else {
 				p_locus_i <- df_allAlleles_tmp %>% filter(POS==nt_pos_i) %>% .$Frequency %>% as.numeric()
+				# print(p_locus_i)
 				stopifnot(sum(p_locus_i)>1.99)
 				
 				dp_locus_i <- df_allAlleles_tmp %>% filter(POS==nt_pos_i) %>% .$Total %>% as.numeric()
@@ -132,9 +139,9 @@ df_pairs_all$nucleotide_diversity_locus <- sapply(seq_len(nrow(df_pairs_all)), f
 })
 wilcox.test(df_pairs_all$nucleotide_diversity_locus[df_pairs_all$type=="within"], df_pairs_all$nucleotide_diversity_locus[df_pairs_all$type=="between"])
 # t.test(df_pairs_all$nucleotide_diversity_locus[df_pairs_all$type=="within"], df_pairs_all$nucleotide_diversity_locus[df_pairs_all$type=="between"])
-p <- ggplot(df_pairs_all) +
-	geom_boxplot(aes(x=type, y=nucleotide_diversity_locus))
-ggsave("../results/boxplot_locus_fst.pdf")
+p <- ggplot(df_pairs_all, aes(x=type, y=nucleotide_diversity_locus)) + geom_boxplot() + geom_jitter(alpha=0.8)+ylab("Nucleotide diversity (Locus)") + theme(axis.title.x = element_blank())
+add_pval(p, pairs = list(c(1,2)), test='wilcox.test', alternative='two.sided')
+ggsave("../results/boxplot_locus_fst.pdf", width = 6, height =6)
 
 # write out the results in excel
 df_meta %>% write_xlsx("../results/data_locus.xlsx")
