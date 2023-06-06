@@ -1,9 +1,9 @@
 # SFLU epitope diversity
 
-## On 2022-08-30
 As suggested by the reviewer, we try to study the diversity of mutations of the NP epitope in different samples. Both at nucletoide/locus level and at haplotype level.
 
-Using three metrics:
+Using two main metrics:
 	1. Shannon entropy
 	2. nucleotide diversity
-	3. Fst
+
+For estimating the epitope diversity at halotype level, we have specifically developed a tool [epitope_diversity](https://github.com/Koohoko/epitope_diversity) for this purpose.
